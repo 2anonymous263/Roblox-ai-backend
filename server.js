@@ -777,13 +777,13 @@ async function generateRobloxBuildPlan({
         }
       ],
       text: {
-        format: {
-          type: "json_schema",
-          name: "roblox_builder_plan",
-          strict: true,
-          schema: BUILDER_SCHEMA
-        }
-      },
+      format: {
+        type: "json_schema",
+        name: "roblox_builder_plan",
+        strict: false,
+        schema: BUILDER_SCHEMA
+      }
+    },
       max_output_tokens: 1200
     });
 
