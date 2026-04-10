@@ -278,7 +278,39 @@ local function requestBuildPlan(player, message)
 	if not response.Success then
 		warn("Builder status code:", response.StatusCode)
 		warn("Builder body:", response.Body)
-		return false, "Builder request mislukt."
+
+		local decodedBody = nil
+		pcall(function()
+			decodedBody = HttpService:JSONDecode(response.Body)
+		end)
+
+		if decodedBody then
+			if decodedBody.summary then
+				return false, string.format(
+					"Builder HTTP %s: %s",
+					tostring(response.StatusCode),
+					tostring(decodedBody.summary)
+				)
+			end
+
+			if decodedBody.reply then
+				return false, string.format(
+					"Builder HTTP %s: %s",
+					tostring(response.StatusCode),
+					tostring(decodedBody.reply)
+				)
+			end
+
+			if decodedBody.error then
+				return false, string.format(
+					"Builder HTTP %s: %s",
+					tostring(response.StatusCode),
+					tostring(decodedBody.error)
+				)
+			end
+		end
+
+		return false, string.format("Builder request mislukt. HTTP %s", tostring(response.StatusCode))
 	end
 
 	local decodeSuccess, data = pcall(function()
