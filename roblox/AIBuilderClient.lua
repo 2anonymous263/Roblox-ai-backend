@@ -175,12 +175,14 @@ local function buildPrettyLayout()
 	inputBox.ClearTextOnFocus = false
 	inputBox.MultiLine = true
 	inputBox.TextWrapped = true
+	inputBox.TextScaled = false
 	inputBox.TextXAlignment = Enum.TextXAlignment.Left
 	inputBox.TextYAlignment = Enum.TextYAlignment.Top
 	inputBox.Font = Enum.Font.Code
 	inputBox.PlaceholderText = "Bijvoorbeeld: maak een futuristische lobby met spawnpad, neon pilaren en een shop UI..."
 	inputBox.PlaceholderColor3 = Color3.fromRGB(117, 133, 160)
 	inputBox.TextColor3 = Color3.fromRGB(240, 246, 255)
+	inputBox.TextStrokeTransparency = 1
 	inputBox.TextSize = 16
 	inputBox.BackgroundColor3 = Color3.fromRGB(16, 25, 42)
 	inputBox.BorderSizePixel = 0
@@ -209,12 +211,16 @@ local function buildPrettyLayout()
 	responseLabel.BorderSizePixel = 0
 	responseLabel.Position = UDim2.new(0, 0, 0, 186)
 	responseLabel.Size = UDim2.new(1, 0, 1, -186)
-	responseLabel.Font = Enum.Font.Gotham
+	responseLabel.Font = Enum.Font.GothamMedium
 	responseLabel.TextColor3 = Color3.fromRGB(231, 238, 250)
-	responseLabel.TextSize = 15
+	responseLabel.TextSize = 13
+	responseLabel.TextScaled = false
+	responseLabel.TextStrokeTransparency = 1
+	responseLabel.TextTransparency = 0
 	responseLabel.TextWrapped = true
 	responseLabel.TextXAlignment = Enum.TextXAlignment.Left
 	responseLabel.TextYAlignment = Enum.TextYAlignment.Top
+	responseLabel.RichText = false
 	responseLabel.Text = "Klaar voor een nieuwe build."
 	responseLabel.ZIndex = 12
 	ensureCorner(responseLabel, 20)
