@@ -34,10 +34,28 @@ local function sendBuildRequest()
 	else
 		local summary = result.summary or "Build afgerond."
 		local warnings = result.warnings or {}
+		local details = {
+			summary,
+			string.format("Bron: %s", result.source or "onbekend"),
+			string.format("Acties: %d", result.actionCount or 0),
+			string.format("Gemaakte objecten: %d", result.createdCount or 0),
+		}
+
 		if #warnings > 0 then
-			summary = summary .. "\nWaarschuwing: " .. warnings[1]
+			table.insert(details, "Waarschuwingen:")
+			for index, warning in ipairs(warnings) do
+				if index > 3 then
+					break
+				end
+				table.insert(details, "- " .. warning)
+			end
 		end
-		responseLabel.Text = string.format("%s\nGemaakte objecten: %d", summary, result.createdCount or 0)
+
+		if (result.createdCount or 0) == 0 then
+			table.insert(details, "Geen objecten gemaakt. Check de Output voor backend details.")
+		end
+
+		responseLabel.Text = table.concat(details, "\n")
 	end
 
 	buildButton.Text = "Bouw"

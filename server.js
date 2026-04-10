@@ -19,7 +19,8 @@ const DEFAULT_BUILDER_PROMPT = [
   "You are an AI Roblox builder planner that returns only structured build actions.",
   "Design practical Roblox scenes and UI from natural language prompts.",
   "Use only the supported classes and properties from the schema.",
-  "Prefer small, reliable plans over ambitious unsupported ones.",
+  "Always return a useful plan with at least 4 create_instance actions unless the user explicitly asks for something tiny.",
+  "Prefer reliable concrete builds over vague summaries.",
   "If a request needs custom Lua behavior, explain that briefly in warnings instead of inventing unsupported actions."
 ].join(" ");
 const MATERIAL_ENUM = [
@@ -57,6 +58,8 @@ const SUPPORTED_BUILDER_CLASSES = [
   "TextLabel",
   "TextButton",
   "TextBox",
+  "UICorner",
+  "UIStroke",
   "UIPadding",
   "UIListLayout",
   "BoolValue",
@@ -146,6 +149,19 @@ const BUILDER_SCHEMA = {
             }
           },
           textColor3: {
+            type: "array",
+            minItems: 3,
+            maxItems: 3,
+            items: {
+              type: "integer",
+              minimum: 0,
+              maximum: 255
+            }
+          },
+          cornerRadius: { type: "number" },
+          strokeThickness: { type: "number" },
+          strokeTransparency: { type: "number" },
+          strokeColor3: {
             type: "array",
             minItems: 3,
             maxItems: 3,
@@ -290,71 +306,511 @@ async function generateRobloxReply({
   return reply;
 }
 
+function createAction(action) {
+  return {
+    actionType: "create_instance",
+    ...action
+  };
+}
+
+function buildLobbyFallbackPlan() {
+  return {
+    summary: "Ik heb een stevige starter lobby gebouwd met spawnplatform, vloer, pilaren en verlichting.",
+    warnings: [
+      "Fallback-plan gebruikt om te voorkomen dat de builder leeg terugkomt."
+    ],
+    actions: [
+      createAction({
+        id: "lobby_model",
+        parent: "Workspace",
+        className: "Model",
+        name: "AILobby"
+      }),
+      createAction({
+        id: "spawn_pad",
+        parent: "lobby_model",
+        className: "SpawnLocation",
+        name: "SpawnPad",
+        anchored: true,
+        canCollide: true,
+        material: "Neon",
+        color: [85, 170, 255],
+        size: [14, 1, 14],
+        position: [0, 3, 0]
+      }),
+      createAction({
+        id: "main_floor",
+        parent: "lobby_model",
+        className: "Part",
+        name: "MainFloor",
+        anchored: true,
+        canCollide: true,
+        material: "SmoothPlastic",
+        color: [45, 45, 55],
+        size: [42, 1, 42],
+        position: [0, 2, 0]
+      }),
+      createAction({
+        id: "pillar_1",
+        parent: "lobby_model",
+        className: "Part",
+        name: "Pillar1",
+        anchored: true,
+        canCollide: true,
+        material: "Neon",
+        color: [0, 255, 255],
+        size: [2, 16, 2],
+        position: [16, 10, 16]
+      }),
+      createAction({
+        id: "pillar_2",
+        parent: "lobby_model",
+        className: "Part",
+        name: "Pillar2",
+        anchored: true,
+        canCollide: true,
+        material: "Neon",
+        color: [0, 255, 255],
+        size: [2, 16, 2],
+        position: [-16, 10, 16]
+      }),
+      createAction({
+        id: "pillar_3",
+        parent: "lobby_model",
+        className: "Part",
+        name: "Pillar3",
+        anchored: true,
+        canCollide: true,
+        material: "Neon",
+        color: [0, 255, 255],
+        size: [2, 16, 2],
+        position: [16, 10, -16]
+      }),
+      createAction({
+        id: "pillar_4",
+        parent: "lobby_model",
+        className: "Part",
+        name: "Pillar4",
+        anchored: true,
+        canCollide: true,
+        material: "Neon",
+        color: [0, 255, 255],
+        size: [2, 16, 2],
+        position: [-16, 10, -16]
+      }),
+      createAction({
+        id: "lobby_light",
+        parent: "spawn_pad",
+        className: "PointLight",
+        name: "SpawnGlow",
+        brightness: 3,
+        range: 24,
+        color: [170, 255, 255]
+      })
+    ]
+  };
+}
+
+function buildShopUiFallbackPlan() {
+  return {
+    summary: "Ik heb een eenvoudige shop UI gebouwd met titel en twee knoppen.",
+    warnings: [
+      "Fallback-plan gebruikt om te voorkomen dat de builder leeg terugkomt."
+    ],
+    actions: [
+      createAction({
+        id: "shop_gui",
+        parent: "StarterGui",
+        className: "ScreenGui",
+        name: "AIShopGui"
+      }),
+      createAction({
+        id: "shop_frame",
+        parent: "shop_gui",
+        className: "Frame",
+        name: "ShopFrame",
+        uiPosition: [0.5, -180, 0.5, -140],
+        uiSize: [0, 360, 0, 280],
+        anchorPoint: [0.5, 0.5],
+        backgroundColor3: [20, 24, 35],
+        backgroundTransparency: 0.08
+      }),
+      createAction({
+        id: "shop_corner",
+        parent: "shop_frame",
+        className: "UICorner",
+        name: "Corner",
+        cornerRadius: 14
+      }),
+      createAction({
+        id: "shop_stroke",
+        parent: "shop_frame",
+        className: "UIStroke",
+        name: "Stroke",
+        strokeThickness: 2,
+        strokeTransparency: 0.15,
+        strokeColor3: [0, 200, 255]
+      }),
+      createAction({
+        id: "shop_title",
+        parent: "shop_frame",
+        className: "TextLabel",
+        name: "Title",
+        text: "AI Shop",
+        textSize: 28,
+        textColor3: [255, 255, 255],
+        backgroundTransparency: 1,
+        uiPosition: [0, 20, 0, 18],
+        uiSize: [1, -40, 0, 40]
+      }),
+      createAction({
+        id: "buy_button",
+        parent: "shop_frame",
+        className: "TextButton",
+        name: "BuyButton",
+        text: "Koop Upgrade",
+        textSize: 22,
+        textColor3: [255, 255, 255],
+        backgroundColor3: [0, 170, 255],
+        uiPosition: [0, 20, 0, 90],
+        uiSize: [1, -40, 0, 56]
+      }),
+      createAction({
+        id: "buy_button_corner",
+        parent: "buy_button",
+        className: "UICorner",
+        name: "Corner",
+        cornerRadius: 10
+      }),
+      createAction({
+        id: "close_button",
+        parent: "shop_frame",
+        className: "TextButton",
+        name: "CloseButton",
+        text: "Sluiten",
+        textSize: 20,
+        textColor3: [255, 255, 255],
+        backgroundColor3: [60, 70, 90],
+        uiPosition: [0, 20, 0, 160],
+        uiSize: [1, -40, 0, 50]
+      })
+    ]
+  };
+}
+
+function buildObbyFallbackPlan() {
+  const actions = [
+    createAction({
+      id: "obby_model",
+      parent: "Workspace",
+      className: "Model",
+      name: "AIObby"
+    }),
+    createAction({
+      id: "obby_spawn",
+      parent: "obby_model",
+      className: "SpawnLocation",
+      name: "ObbySpawn",
+      anchored: true,
+      canCollide: true,
+      material: "Neon",
+      color: [85, 255, 127],
+      size: [10, 1, 10],
+      position: [0, 5, 0]
+    })
+  ];
+
+  const platformPositions = [
+    [0, 5, 16],
+    [10, 7, 30],
+    [-10, 9, 44],
+    [10, 11, 58],
+    [-10, 13, 72],
+    [0, 15, 86]
+  ];
+
+  for (let index = 0; index < platformPositions.length; index += 1) {
+    actions.push(
+      createAction({
+        id: `obby_platform_${index + 1}`,
+        parent: "obby_model",
+        className: "Part",
+        name: `Platform${index + 1}`,
+        anchored: true,
+        canCollide: true,
+        material: index % 2 === 0 ? "Neon" : "SmoothPlastic",
+        color: index % 2 === 0 ? [255, 170, 0] : [255, 255, 255],
+        size: [8, 1, 8],
+        position: platformPositions[index]
+      })
+    );
+  }
+
+  return {
+    summary: "Ik heb een starter obby gebouwd met spawn en meerdere platforms.",
+    warnings: [
+      "Fallback-plan gebruikt om te voorkomen dat de builder leeg terugkomt."
+    ],
+    actions
+  };
+}
+
+function buildTycoonFallbackPlan() {
+  return {
+    summary: "Ik heb een eenvoudige tycoon startzone gebouwd met claim pad en stations.",
+    warnings: [
+      "Fallback-plan gebruikt om te voorkomen dat de builder leeg terugkomt."
+    ],
+    actions: [
+      createAction({
+        id: "tycoon_model",
+        parent: "Workspace",
+        className: "Model",
+        name: "AITycoon"
+      }),
+      createAction({
+        id: "tycoon_floor",
+        parent: "tycoon_model",
+        className: "Part",
+        name: "TycoonFloor",
+        anchored: true,
+        canCollide: true,
+        material: "Concrete",
+        color: [80, 80, 80],
+        size: [36, 1, 36],
+        position: [0, 2, 0]
+      }),
+      createAction({
+        id: "claim_pad",
+        parent: "tycoon_model",
+        className: "Part",
+        name: "ClaimPad",
+        anchored: true,
+        canCollide: true,
+        material: "Neon",
+        color: [0, 255, 127],
+        size: [8, 1, 8],
+        position: [0, 3, -10]
+      }),
+      createAction({
+        id: "collector",
+        parent: "tycoon_model",
+        className: "Part",
+        name: "Collector",
+        anchored: true,
+        canCollide: true,
+        material: "Metal",
+        color: [100, 100, 110],
+        size: [6, 4, 6],
+        position: [-10, 4, 8]
+      }),
+      createAction({
+        id: "upgrader",
+        parent: "tycoon_model",
+        className: "Part",
+        name: "Upgrader",
+        anchored: true,
+        canCollide: true,
+        material: "Metal",
+        color: [85, 170, 255],
+        size: [6, 6, 6],
+        position: [10, 5, 8]
+      }),
+      createAction({
+        id: "dropper",
+        parent: "tycoon_model",
+        className: "Part",
+        name: "Dropper",
+        anchored: true,
+        canCollide: true,
+        material: "Metal",
+        color: [255, 170, 0],
+        size: [5, 5, 5],
+        position: [0, 4, 14]
+      })
+    ]
+  };
+}
+
+function buildGenericFallbackPlan() {
+  return {
+    summary: "Ik heb een veilige starter build gemaakt met vloer, spawn en verlichting.",
+    warnings: [
+      "Fallback-plan gebruikt omdat de AI geen bruikbaar build-plan teruggaf."
+    ],
+    actions: [
+      createAction({
+        id: "generic_model",
+        parent: "Workspace",
+        className: "Model",
+        name: "AIStarterBuild"
+      }),
+      createAction({
+        id: "generic_floor",
+        parent: "generic_model",
+        className: "Part",
+        name: "Floor",
+        anchored: true,
+        canCollide: true,
+        material: "SmoothPlastic",
+        color: [70, 70, 80],
+        size: [32, 1, 32],
+        position: [0, 2, 0]
+      }),
+      createAction({
+        id: "generic_spawn",
+        parent: "generic_model",
+        className: "SpawnLocation",
+        name: "Spawn",
+        anchored: true,
+        canCollide: true,
+        material: "Neon",
+        color: [85, 170, 255],
+        size: [10, 1, 10],
+        position: [0, 3, 0]
+      }),
+      createAction({
+        id: "generic_light",
+        parent: "generic_spawn",
+        className: "PointLight",
+        name: "SpawnLight",
+        brightness: 2.5,
+        range: 20,
+        color: [170, 220, 255]
+      })
+    ]
+  };
+}
+
+function buildFallbackPlan(message) {
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("shop") ||
+    normalized.includes("winkel") ||
+    normalized.includes("store") ||
+    normalized.includes("ui")
+  ) {
+    return buildShopUiFallbackPlan();
+  }
+
+  if (
+    normalized.includes("obby") ||
+    normalized.includes("parkour") ||
+    normalized.includes("platform")
+  ) {
+    return buildObbyFallbackPlan();
+  }
+
+  if (
+    normalized.includes("tycoon") ||
+    normalized.includes("factory") ||
+    normalized.includes("collector")
+  ) {
+    return buildTycoonFallbackPlan();
+  }
+
+  if (
+    normalized.includes("lobby") ||
+    normalized.includes("spawn") ||
+    normalized.includes("hub")
+  ) {
+    return buildLobbyFallbackPlan();
+  }
+
+  return buildGenericFallbackPlan();
+}
+
+function isNonEmptyBuildPlan(plan) {
+  return Boolean(plan && Array.isArray(plan.actions) && plan.actions.length > 0);
+}
+
 async function generateRobloxBuildPlan({
   playerName,
   message,
   context,
   systemPrompt
 }) {
-  const data = await createOpenAIResponse({
-    model: OPENAI_BUILDER_MODEL,
-    input: [
-      {
-        role: "system",
-        content: [
-          {
-            type: "input_text",
-            text: systemPrompt || DEFAULT_BUILDER_PROMPT
-          }
-        ]
+  const attemptPrompts = [
+    systemPrompt || DEFAULT_BUILDER_PROMPT,
+    [
+      systemPrompt || DEFAULT_BUILDER_PROMPT,
+      "This is a retry because the first answer was empty or too weak.",
+      "You must return a concrete plan with multiple actions.",
+      "Always include at least one visible Workspace build unless the request is clearly only UI.",
+      "Do not leave actions empty."
+    ].join(" ")
+  ];
+
+  for (const prompt of attemptPrompts) {
+    const data = await createOpenAIResponse({
+      model: OPENAI_BUILDER_MODEL,
+      input: [
+        {
+          role: "system",
+          content: [
+            {
+              type: "input_text",
+              text: prompt
+            }
+          ]
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: [
+                `Player: ${playerName || "Onbekende speler"}`,
+                "Goal: build Roblox objects and UI directly from this prompt.",
+                "Allowed roots: Workspace, StarterGui, ReplicatedStorage, Lighting.",
+                "Allowed references: previous action ids as parent values.",
+                "Allowed classes: " + SUPPORTED_BUILDER_CLASSES.join(", "),
+                "Always prefer a build that the game can execute immediately.",
+                context ? `Context: ${context}` : null,
+                `Build request: ${message}`
+              ]
+                .filter(Boolean)
+                .join("\n")
+            }
+          ]
+        }
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "roblox_builder_plan",
+          strict: true,
+          schema: BUILDER_SCHEMA
+        }
       },
-      {
-        role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: [
-              `Player: ${playerName || "Onbekende speler"}`,
-              "Goal: build Roblox objects and UI directly from this prompt.",
-              "Allowed roots: Workspace, StarterGui, ReplicatedStorage, Lighting.",
-              "Allowed references: previous action ids as parent values.",
-              "Allowed classes: " + SUPPORTED_BUILDER_CLASSES.join(", "),
-              "Return only supported actions.",
-              context ? `Context: ${context}` : null,
-              `Build request: ${message}`
-            ]
-              .filter(Boolean)
-              .join("\n")
-          }
-        ]
-      }
-    ],
-    text: {
-      format: {
-        type: "json_schema",
-        name: "roblox_builder_plan",
-        strict: true,
-        schema: BUILDER_SCHEMA
-      }
-    },
-    max_output_tokens: 1200
-  });
+      max_output_tokens: 1200
+    });
 
-  const rawPlan = getReplyText(data);
+    const rawPlan = getReplyText(data);
 
-  if (!rawPlan) {
-    throw new Error("De builder gaf geen JSON-plan terug.");
+    if (!rawPlan) {
+      continue;
+    }
+
+    try {
+      const parsedPlan = JSON.parse(rawPlan);
+
+      if (isNonEmptyBuildPlan(parsedPlan)) {
+        return {
+          ...parsedPlan,
+          source: "ai"
+        };
+      }
+    } catch (error) {
+      continue;
+    }
   }
 
-  let parsedPlan;
-
-  try {
-    parsedPlan = JSON.parse(rawPlan);
-  } catch (error) {
-    throw new Error("Kon builder JSON niet parsen.");
-  }
-
-  return parsedPlan;
+  return {
+    ...buildFallbackPlan(message),
+    source: "fallback"
+  };
 }
 
 app.get("/", (req, res) => {

@@ -125,6 +125,15 @@ local function applyActionProperties(instance, action)
 		if action.material and materialMap[action.material] then
 			instance.Material = materialMap[action.material]
 		end
+		if action.shape and instance:IsA("Part") then
+			if action.shape == "Ball" then
+				instance.Shape = Enum.PartType.Ball
+			elseif action.shape == "Cylinder" then
+				instance.Shape = Enum.PartType.Cylinder
+			else
+				instance.Shape = Enum.PartType.Block
+			end
+		end
 	end
 
 	if instance:IsA("PointLight") or instance:IsA("SpotLight") or instance:IsA("SurfaceLight") then
@@ -175,6 +184,22 @@ local function applyActionProperties(instance, action)
 		end
 		if action.placeholderText ~= nil and instance:IsA("TextBox") then
 			instance.PlaceholderText = action.placeholderText
+		end
+	end
+
+	if instance:IsA("UICorner") and action.cornerRadius ~= nil then
+		instance.CornerRadius = UDim.new(0, action.cornerRadius)
+	end
+
+	if instance:IsA("UIStroke") then
+		if action.strokeThickness ~= nil then
+			instance.Thickness = action.strokeThickness
+		end
+		if action.strokeTransparency ~= nil then
+			instance.Transparency = action.strokeTransparency
+		end
+		if action.strokeColor3 then
+			instance.Color = colorFromArray(action.strokeColor3)
 		end
 	end
 
@@ -284,5 +309,7 @@ BuildWithAI.OnServerInvoke = function(player, message)
 		summary = result.summary or "Build voltooid.",
 		warnings = result.warnings or {},
 		createdCount = createdCount,
+		source = result.source or "unknown",
+		actionCount = #(result.actions or {}),
 	}
 end
